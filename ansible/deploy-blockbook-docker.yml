@@ -1,6 +1,6 @@
 ---
 - name: Deploy BlockBook using Docker Compose
-  hosts: blockbook_servers
+  hosts: blockbook-machine
   become: true
 
   vars:
