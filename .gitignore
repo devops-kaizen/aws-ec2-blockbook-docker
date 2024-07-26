@@ -1,0 +1,10 @@
+AWS_root_key.csv
+ghost_server_key
+ghost_server_key.pub
+auth/*
+ansible/vars.yml
+ansible/inventory*
+terraform/.terraform*
+terraform/*tfstate*
+scripts/backup/*
+cinema_script

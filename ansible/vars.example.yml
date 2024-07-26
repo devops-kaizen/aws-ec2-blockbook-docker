@@ -1,0 +1,16 @@
+docker_image: my_docker_image:latest
+container_name: my_docker_container
+host_port: 8080
+container_port: 80
+volume_host_path: /mnt/volume
+volume_container_path: /data
+
+# ghost vars.yml
+ghost_container_name: some-ghost  # Name of the Ghost container
+ghost_volume_name: some-ghost-data  # Name of the Docker volume for Ghost CMS data
+ghost_network_name: ghost_network  # Name of the Docker network
+ghost_port_mapping: "2368:2368"  # Port mapping from host to container (format host_port:container_port)
+ghost_image: ghost  # Docker image for Ghost CMS
+ghost_env:
+  NODE_ENV: development  # Environment variable for the container
+  database__connection__filename: /var/lib/ghost/content/data/ghost.db  # Database connection filename

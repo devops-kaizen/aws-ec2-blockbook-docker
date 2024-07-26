@@ -1,0 +1,90 @@
+---
+- name: Deploy BlockBook using Docker Compose
+  hosts: blockbook_servers
+  become: true
+
+  vars:
+    blockbook_repo: "https://github.com/ranchimall/blockbook-docker"
+    blockbook_dir: "/opt/blockbook"
+    env_file: "{{ blockbook_dir }}/.env"
+    build_image: false  # Set this to true to build the Docker image from the Dockerfile
+    # Docker Compose environment variables
+    backend_image: "vivekteega/blockbook:1.0.0"
+    frontend_image: "vivekteega/blockbook:1.0.0"
+    backend_container_name: "blockbook-backend"
+    frontend_container_name: "blockbook-frontend"
+    backend_bootstrap_file: ""  # Set to empty string if not provided
+    frontend_bootstrap_file: ""  # Set to empty string if not provided
+    backend_bootstrap_url: ""  # Set to empty string if not provided
+    frontend_bootstrap_url: ""  # Set to empty string if not provided
+    backend_port_1: "38366"
+    backend_port_2: "8066"
+    frontend_port_1: "9166"
+    frontend_port_2: "9066"
+
+  tasks:
+    - name: Ensure necessary directories exist
+      file:
+        path: "{{ blockbook_dir }}"
+        state: directory
+
+    - name: Clone BlockBook repository
+      git:
+        repo: "{{ blockbook_repo }}"
+        dest: "{{ blockbook_dir }}"
+        force: yes
+
+    - name: Change to BlockBook directory
+      command: chdir="{{ blockbook_dir }}" pwd
+      register: result
+    - debug: var=result.stdout
+
+    - name: Create .env file with necessary variables
+      copy:
+        dest: "{{ env_file }}"
+        content: |
+          BACKEND_IMAGE={{ backend_image }}
+          FRONTEND_IMAGE={{ frontend_image }}
+          BACKEND_CONTAINER_NAME={{ backend_container_name }}
+          FRONTEND_CONTAINER_NAME={{ frontend_container_name }}
+          BACKEND_BOOTSTRAP_FILE={{ backend_bootstrap_file }}
+          FRONTEND_BOOTSTRAP_FILE={{ frontend_bootstrap_file }}
+          BACKEND_BOOTSTRAP_URL={{ backend_bootstrap_url }}
+          FRONTEND_BOOTSTRAP_URL={{ frontend_bootstrap_url }}
+          BACKEND_PORT_1={{ backend_port_1 }}
+          BACKEND_PORT_2={{ backend_port_2 }}
+          FRONTEND_PORT_1={{ frontend_port_1 }}
+          FRONTEND_PORT_2={{ frontend_port_2 }}
+
+    - name: Build Docker image (optional)
+      shell: docker build -t {{ backend_image }} .
+      args:
+        chdir: "{{ blockbook_dir }}"
+      when: build_image | bool
+
+    - name: Ensure Docker Compose is installed
+      apt:
+        name: docker-compose
+        state: present
+
+    - name: Deploy BlockBook using Docker Compose
+      shell: docker-compose up -d
+      args:
+        chdir: "{{ blockbook_dir }}"
+
+    - name: Wait for BlockBook services to be up
+      shell: docker-compose ps
+      args:
+        chdir: "{{ blockbook_dir }}"
+      register: compose_ps
+    - debug: var=compose_ps.stdout
+
+    - name: Check if BlockBook backend service is running
+      shell: docker logs blockbook-backend
+      register: backend_logs
+    - debug: var=backend_logs.stdout
+
+    - name: Check if BlockBook frontend service is running
+      shell: docker logs blockbook-frontend
+      register: frontend_logs
+    - debug: var=frontend_logs.stdout
