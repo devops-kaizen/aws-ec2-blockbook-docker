@@ -2,12 +2,29 @@ provider "aws" {
   region = "eu-north-1"
 }
 
+# Data source to check if the key pair exists
+data "aws_key_pair" "existing_key" {
+  key_name = "blockbook_docker_key"
+}
+
+# Conditionally create the key pair if it does not exist
 resource "aws_key_pair" "deployer_1" {
+  count = length(data.aws_key_pair.existing_key.id) == 0 ? 1 : 0
   key_name   = "blockbook_docker_key"
   public_key = file("../auth/blockbook_docker_key.pub")
 }
 
+# Data source to check if the security group exists
+data "aws_security_group" "existing_sg" {
+  filter {
+    name   = "group-name"
+    values = ["blockbook_docker_sg"]
+  }
+}
+
+# Conditionally create the security group if it does not exist
 resource "aws_security_group" "blockbook_docker_sg" {
+  count       = length(data.aws_security_group.existing_sg.id) == 0 ? 1 : 0
   name        = "blockbook_docker_sg"
   description = "Security group for Blockbook Docker"
 
@@ -89,15 +106,18 @@ resource "aws_security_group" "blockbook_docker_sg" {
 resource "aws_instance" "blockbook_docker_server" {
   ami           = "ami-07c8c1b18ca66bb07"
   instance_type = "t3.micro"
-  key_name      = aws_key_pair.deployer_1.key_name
+
+  key_name = length(data.aws_key_pair.existing_key.id) > 0 ? data.aws_key_pair.existing_key.key_name : aws_key_pair.deployer_1[0].key_name
 
   associate_public_ip_address = true
 
-  vpc_security_group_ids = [aws_security_group.blockbook_docker_sg.id]
+  vpc_security_group_ids = length(data.aws_security_group.existing_sg.id) > 0 ? [data.aws_security_group.existing_sg.id] : [aws_security_group.blockbook_docker_sg[0].id]
 
   tags = {
     Name = "BlockbookDockerServer"
   }
+
+  depends_on = [aws_security_group.blockbook_docker_sg]
 }
 
 output "blockbook_docker_instance_ip" {
